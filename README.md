@@ -1,38 +1,6 @@
-# <img src="framework-docs/src/docs/spring-framework.png" width="80" height="80"> Spring Framework [![Build Status](https://ci.spring.io/api/v1/teams/spring-framework/pipelines/spring-framework-5.3.x/jobs/build/badge)](https://ci.spring.io/teams/spring-framework/pipelines/spring-framework-5.3.x?groups=Build") [![Revved up by Gradle Enterprise](https://img.shields.io/badge/Revved%20up%20by-Gradle%20Enterprise-06A0CE?logo=Gradle&labelColor=02303A)](https://ge.spring.io/scans?search.rootProjectNames=spring)
+# 个人理解的Spring
+虽然网上有各种Spring的资料，但是能把spring从体系结构上讲明白的博客或者书籍却没有那么多。本项目是自己看了《Spring揭秘》和跟着一位阿里大佬的测试用例一直debug而总结的知识点，前者让我对Spring的体系结构有一个更清楚的一个认识，跟着后者的测试用例，能落地到具体的代码，这样能更直观的体会到Spring的魅力。个人认为二者缺一不可，必须先有《Spring揭秘》带来的知识框架，才能更好的理解代码流程，否则尽管跟了代码流程也不知道它属于Spring的哪个阶段，他的意义是什么，他有什么作用。我不会像网上那样什么几千字，几万字带你搞懂Spring，在查看Spring源码的时候，Spring一共129W行代码，而我自我感觉看的代码不到3W，我不会说我能带大家搞懂Spring。但是对于接触Spring一段时间，但是一看源码就头大，有时候一直往下深入，就深入到几十层代码，不知道怎么看的朋友们，我认为是有一定帮助的，因为我也是这样走过来的！！！我希望大家能看到这个项目，各抒己见，一起维护这个，让更多的人不在一提到Spring源码就害怕，让我们一起充分学习Spring，体会其魅力！
 
-This is the home of the Spring Framework: the foundation for all [Spring projects](https://spring.io/projects). Collectively the Spring Framework and the family of Spring projects are often referred to simply as "Spring". 
-
-Spring provides everything required beyond the Java programming language for creating enterprise applications for a wide range of scenarios and architectures. Please read the [Overview](https://docs.spring.io/spring/docs/current/spring-framework-reference/overview.html#spring-introduction) section as reference for a more complete introduction.
-
-## Code of Conduct
-
-This project is governed by the [Spring Code of Conduct](CODE_OF_CONDUCT.adoc). By participating, you are expected to uphold this code of conduct. Please report unacceptable behavior to spring-code-of-conduct@pivotal.io.
-
-## Access to Binaries
-
-For access to artifacts or a distribution zip, see the [Spring Framework Artifacts](https://github.com/spring-projects/spring-framework/wiki/Spring-Framework-Artifacts) wiki page.
-
-## Documentation
-
-The Spring Framework maintains reference documentation ([published](https://docs.spring.io/spring-framework/docs/current/spring-framework-reference/) and [source](framework-docs/src/docs/asciidoc)), GitHub [wiki pages](https://github.com/spring-projects/spring-framework/wiki), and an
-[API reference](https://docs.spring.io/spring-framework/docs/current/javadoc-api/). There are also [guides and tutorials](https://spring.io/guides) across Spring projects.
-
-## Micro-Benchmarks
-
-See the [Micro-Benchmarks](https://github.com/spring-projects/spring-framework/wiki/Micro-Benchmarks) wiki page.
-
-## Build from Source
-
-See the [Build from Source](https://github.com/spring-projects/spring-framework/wiki/Build-from-Source) wiki page and the [CONTRIBUTING.md](CONTRIBUTING.md) file.
-
-## Continuous Integration Builds
-
-Information regarding CI builds can be found in the [Spring Framework Concourse pipeline](ci/README.adoc) documentation.
-
-## Stay in Touch
-
-Follow [@SpringCentral](https://twitter.com/springcentral), [@SpringFramework](https://twitter.com/springframework), and its [team members](https://twitter.com/springframework/lists/team/members) on Twitter. In-depth articles can be found at [The Spring Blog](https://spring.io/blog/), and releases are announced via our [news feed](https://spring.io/blog/category/news).
-
-## License
-
-The Spring Framework is released under version 2.0 of the [Apache License](https://www.apache.org/licenses/LICENSE-2.0).
+个人根据《Spring揭秘》和测试用例的笔记都记录在https://www.yuque.com/littledu-6kzp3/kb，
+强烈建议先看这个笔记，然后再根据笔记去看源码，这样我相信更能理解Spring的流程，他的扩展点的意义！
+测试用例的地址在 https://github.com/djcforward/spring-annotation-book 该地址是fork的csdn作者冰河的仓库，并根据自己的需要进行了一部分修改的。
