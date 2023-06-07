@@ -1,0 +1,90 @@
+import org.gradle.plugins.ide.eclipse.model.ProjectDependency
+import org.gradle.plugins.ide.eclipse.model.SourceFolder
+
+apply plugin: 'eclipse'
+
+eclipse.jdt {
+	sourceCompatibility = 17
+	targetCompatibility = 17
+}
+
+// Replace classpath entries with project dependencies (GRADLE-1116)
+// https://issues.gradle.org/browse/GRADLE-1116
+eclipse.classpath.file.whenMerged { classpath ->
+	def regexp = /.*?\/([^\/]+)\/build\/([^\/]+\/)+(?:main|test)/ // only match those that end in main or test (avoids removing necessary entries like build/classes/jaxb)
+	def projectOutputDependencies = classpath.entries.findAll { entry -> entry.path =~ regexp }
+	projectOutputDependencies.each { entry ->
+		def matcher = (entry.path =~ regexp)
+		if (matcher) {
+			def projectName = matcher[0][1]
+			def path = "/${projectName}"
+			if (!classpath.entries.find { e -> e instanceof ProjectDependency && e.path == path }) {
+				def recursiveDependency = entry.path.matches('.+/' + projectName + '/build/([^/]+/)+(?:main|test)')
+				// Avoid recursive dependency on current project.
+				if (!recursiveDependency) {
+					classpath.entries.add(new ProjectDependency(path))
+				}
+			}
+			classpath.entries.remove(entry)
+		}
+	}
+
+	// Remove any remaining direct depencencies on JARs in the build/libs folder
+	// except the repack JARs.
+	classpath.entries.removeAll { entry -> (entry.path =~ /(?!.*?repack.*\.jar).*?\/([^\/]+)\/build\/libs\/[^\/]+\.jar/) }
+}
+
+// Use separate main/test outputs (prevents WTP from packaging test classes)
+eclipse.classpath.defaultOutputDir = file(project.name + '/bin/eclipse')
+eclipse.classpath.file.beforeMerged { classpath ->
+	classpath.entries.findAll{ it instanceof SourceFolder }.each {
+		if (it.output.startsWith('bin/')) {
+			it.output = null
+		}
+	}
+}
+eclipse.classpath.file.whenMerged {
+	entries.findAll{ it instanceof SourceFolder }.each {
+		it.output = 'bin/' + it.path.split('/')[1]
+	}
+}
+
+// Ensure project dependencies come after 3rd-party libs (SPR-11836)
+// https://jira.spring.io/browse/SPR-11836
+eclipse.classpath.file.whenMerged {
+	entries.findAll { it instanceof ProjectDependency }.each {
+		// delete from original position
+		entries.remove(it)
+		// append to end of classpath
+		entries.add(it)
+	}
+}
+
+// Ensure that JMH sources and resources are treated as test classpath entries
+// so that they can see test fixtures.
+// https://github.com/melix/jmh-gradle-plugin/issues/157
+eclipse.classpath.file.whenMerged {
+	entries.findAll { it.path =~ /src\/jmh\/(java|kotlin|resources)/ }.each {
+		it.entryAttributes['test'] = 'true'
+	}
+}
+
+// Include project specific settings
+task eclipseSettings(type: Copy) {
+	from rootProject.files(
+		'src/eclipse/org.eclipse.core.resources.prefs',
+		'src/eclipse/org.eclipse.jdt.core.prefs',
+		'src/eclipse/org.eclipse.jdt.ui.prefs')
+	into project.file('.settings/')
+	outputs.upToDateWhen { false }
+}
+
+task cleanEclipseSettings(type: Delete) {
+	delete project.file('.settings/org.eclipse.core.resources.prefs')
+	delete project.file('.settings/org.eclipse.jdt.core.prefs')
+	delete project.file('.settings/org.eclipse.jdt.ui.prefs')
+}
+
+tasks['eclipse'].dependsOn(eclipseSettings)
+tasks['eclipseJdt'].dependsOn(eclipseSettings)
+tasks['cleanEclipse'].dependsOn(cleanEclipseSettings)
