@@ -157,7 +157,7 @@ import java.lang.annotation.*;
  * 		导入 AutoProxyRegistrar 和 ProxyTransactionManagementConfiguration
  * 			具体实现在 ConfigurationClassParser.doProcessConfigurationClass().processImports()
  *
- * 		对于AutoProxyRegistrar：就是注册自动代理注册器
+ * 		对于AutoProxyRegistrar：就是注册 自动代理注册器
  * 		对于ProxyTransactionManagementConfiguration：就是设置一些事务的属性资源、拦截器等
  */
 @Target(ElementType.TYPE)
@@ -177,6 +177,8 @@ public @interface EnableTransactionManagement {
 	 * {@code @Async} annotation will be upgraded to subclass proxying at the same
 	 * time. This approach has no negative impact in practice unless one is explicitly
 	 * expecting one type of proxy vs another, e.g. in tests.
+	 *
+	 * 使用CGLIB代理或者JDK代理（false是JDK）
 	 */
 	boolean proxyTargetClass() default false;
 
@@ -189,6 +191,10 @@ public @interface EnableTransactionManagement {
 	 * ignored since Spring's interceptor does not even kick in for such a runtime
 	 * scenario. For a more advanced mode of interception, consider switching this to
 	 * {@link AdviceMode#ASPECTJ}.
+	 *
+	 * 表示事务通知是如何执行的
+	 *        PROXY 表示通过代理的方法执行
+	 *        ASPECTJ 表示事务会通过aspectj执行
 	 */
 	AdviceMode mode() default AdviceMode.PROXY;
 
@@ -196,6 +202,8 @@ public @interface EnableTransactionManagement {
 	 * Indicate the ordering of the execution of the transaction advisor
 	 * when multiple advices are applied at a specific joinpoint.
 	 * <p>The default is {@link Ordered#LOWEST_PRECEDENCE}.
+	 *
+	 * 事务处理的执行顺序
 	 */
 	int order() default Ordered.LOWEST_PRECEDENCE;
 

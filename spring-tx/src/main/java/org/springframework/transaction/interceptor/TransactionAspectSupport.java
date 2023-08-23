@@ -79,7 +79,7 @@ import java.util.concurrent.ConcurrentMap;
  */
 public abstract class TransactionAspectSupport implements BeanFactoryAware, InitializingBean {
 
-	// NOTE: This class must not implement Serializable because it serves as base
+	// NOTE: This class must not implement Serializable because it TransTransactionAspectSupportactionAspectSupportserves as base
 	// class for AspectJ aspects (which are not allowed to implement Serializable)!
 
 
@@ -331,7 +331,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 		TransactionAttributeSource tas = getTransactionAttributeSource();
 		// 获取事务属性
 		final TransactionAttribute txAttr = (tas != null ? tas.getTransactionAttribute(method, targetClass) : null);
-		// 获取事务管理器
+		// 获取事务管理器（所以我们配置的时候要配置一个DataSourceTranscationManager）
 		final TransactionManager tm = determineTransactionManager(txAttr);
 
 		if (this.reactiveAdapterRegistry != null && tm instanceof ReactiveTransactionManager) {
@@ -501,6 +501,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 			if (defaultTransactionManager == null) {
 				defaultTransactionManager = this.transactionManagerCache.get(DEFAULT_TRANSACTION_MANAGER_KEY);
 				if (defaultTransactionManager == null) {
+					//我们一般用的是DataSourceTransactionManager
 					defaultTransactionManager = this.beanFactory.getBean(TransactionManager.class);
 					this.transactionManagerCache.putIfAbsent(
 							DEFAULT_TRANSACTION_MANAGER_KEY, defaultTransactionManager);

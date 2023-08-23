@@ -123,6 +123,7 @@ public class RuleBasedTransactionAttribute extends DefaultTransactionAttribute i
 	 *
 	 * 将目标方法抛出的异常和@Transaction配置的异常进行匹配，如果匹配成功，则获取到的
 	 * winner对象不是 NoRollbackRuleAttribute就返回true，否则返回false
+	 *
 	 * 如果匹配失败，则调用父类的方法（即判断时不是RuntimeExcption || Error）
 	 */
 	@Override
