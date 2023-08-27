@@ -97,12 +97,12 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	private final Map<String, Set<String>> containedBeanMap = new ConcurrentHashMap<>(16);
 
 	/** Map between dependent bean names: bean name to Set of dependent bean names.
-	 * 依赖 bean 名称之间的映射：<被依赖的BeanName，依赖这个Bean的所有Bean>
+	 * 依赖 bean 名称之间的映射：<被依赖的BeanName，依赖这个Bean的所有Bean> 假设A--> B <B，依赖B的所有Bean>
 	 * */
 	private final Map<String, Set<String>> dependentBeanMap = new ConcurrentHashMap<>(64);
 
 	/** Map between depending bean names: bean name to Set of bean names for the bean's dependencies.
-	 * 依赖 bean 名称之间的映射：<依赖别人的BeanName，依赖的所有Bean>
+	 * 依赖 bean 名称之间的映射：<依赖别人的BeanName，依赖的所有Bean>  假设A--> B <A，A依赖的所有Bean>
 	 * */
 	private final Map<String, Set<String>> dependenciesForBeanMap = new ConcurrentHashMap<>(64);
 
@@ -171,9 +171,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 *
 	 * 获取单例Bean，这里涉及循环依赖问题，通过三级缓存解决
 	 * singletonObjects:一级缓存，存放已经实例化的Bean
-	 * earlySingletonObjects：二级缓存，存放未完成的Bean，如果有代理的话存放的是代理对象
+	 * earlySingletonObjects：二级缓存，存放未完成的Bean，如果有代理的话存放的是代理对象 存放的是没经过属性填充的
 	 * singletonFactories ： 三级缓存，存放的是ObjectFactory，用来生产对象的 生产的对象是没经过属性填充的
-	 * 解析三级缓存 https://www.yuque.com/littledu-6kzp3/kb/kheqoz/edit#wJ3n8
+	 * 解析三级缓存 https://www.yuque.com/littledu-6kzp3/kb/ptf9t3
 	 */
 	@Nullable
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
@@ -194,7 +194,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 						if (singletonObject == null) {
 							ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
 							if (singletonFactory != null) {
-								//三级缓存创建Bean
+								//三级缓存创建Bean（调用的是 AbstractAutowireCapableBeanFactory.getEarlyBeanReference()）
+								// 在创建三级缓存的时候就已经设置了三级缓存的getObject()逻辑
+								// 在AbstractAutowireCapableBeanFactory.doCreateBean()设置的
 								singletonObject = singletonFactory.getObject();
 								//放入二级缓存
 								this.earlySingletonObjects.put(beanName, singletonObject);
@@ -240,7 +242,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					this.suppressedExceptions = new LinkedHashSet<>();
 				}
 				try {
-					//获取创建的Bean
+					//通过ObjectFactory获取创建的Bean（但和三级缓存没有关系）
 					singletonObject = singletonFactory.getObject();
 					newSingleton = true;
 				}
@@ -362,7 +364,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * Callback before singleton creation.
 	 * <p>The default implementation register the singleton as currently in creation.
 	 *
-	 * 单例创建前的回调。
+	 * 单例创建前的回调。，判断当前Bean是否已经正在创建了
 	 * 默认实现 将单例注册为当前正在创建中。（循环依赖用得到）
 	 * @param beanName the name of the singleton about to be created
 	 * @see #isSingletonCurrentlyInCreation
@@ -440,9 +442,10 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * to be destroyed before the given bean is destroyed.
 	 *
 	 * 为给定的 bean 注册一个依赖 bean，在给定的 bean 被销毁之前被销毁。
-	 * B 依赖 A
-	 * @param beanName the name of the bean---> A (被B依赖)
-	 * @param dependentBeanName the name of the dependent bean---> B（依赖A）
+	 *
+	 * 比如 A-->B
+	 * @param beanName the name of the bean ---> B (被A依赖)
+	 * @param dependentBeanName the name of the dependent bean ---> A（依赖B）
 	 */
 	public void registerDependentBean(String beanName, String dependentBeanName) {
 		String canonicalName = canonicalName(beanName);

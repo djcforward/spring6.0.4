@@ -60,9 +60,9 @@ import java.lang.annotation.Target;
  * 			AnnotationConfigApplicationContext.register(componentClasses);
  * （2）refresh()，调用BeanFactoryPostProcessor的后置处理逻辑，即invokeBeanFactoryPostProcessors()
  * 			通过@CommponentScan去扫描相应路径，然后判断哪些Bean有没有标注@DependsOn，
- * 			如果标注了就封装Bean信息 AnnotationConfigApplicationContext.refresh();
- * 上面两步最终调用的逻辑都是AnnotationConfigUtils.processCommonDefinitionAnnotations()
- * （3）	refresh()，实例化阶段,即finishBeanFactoryInitialization(beanFactory);
+ * 			如果标注了就封装Bean信息 AbstractApplicationContext.refresh();
+ * 上面两步最终调用的逻辑都是AnnotationConfigUtils.processCommonDefinitionAnnotations() 且属于容器的器启动阶段
+ * （3）	refresh()，实例化阶段,即 finishBeanFactoryInitialization(beanFactory);
  *
  *
  */

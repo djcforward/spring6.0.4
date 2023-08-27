@@ -44,6 +44,9 @@ public interface ObjectFactory<T> {
 	 * of the object managed by this factory.
 	 * @return the resulting instance
 	 * @throws BeansException in case of creation errors
+	 *
+	 * 拿到早期引用的方法在AbstractAutowireCapableBeanFactory中已经定义好了
+	 * getEarlyBeanReference()
 	 */
 	T getObject() throws BeansException;
 

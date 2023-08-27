@@ -128,8 +128,8 @@ public class InjectionMetadata {
 	 * 遍历elementsToIterate然后调用具体的InjectedElement element 的inject()
 	 *
 	 * 注意：这里的element有三种类型，InjectionMetadata、InjectedElement、AutowiredFieldElement，AutowiredMethodElement
-	 * 对于@Autowired,封装的类型是AutowiredFieldElement，所以我们只分析他的inject()
-	 * 对于@Resource，封装的类型是InjectionMetadata，所以我们只分析他的inject()
+	 * 对于@Autowired,封装的类型是 AutowiredFieldElement，所以我们只分析他的inject()
+	 * 对于@Resource，封装的类型是 InjectionMetadata，所以我们只分析他的inject()
 	 * @param target
 	 * @param beanName
 	 * @param pvs

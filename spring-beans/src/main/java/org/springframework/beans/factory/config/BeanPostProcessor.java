@@ -98,6 +98,8 @@ public interface BeanPostProcessor {
 	 *
 	 * 涉及到@EnableTransactionManagement的流程，会自动执行这个方法
 	 * 主要是创建AOP和事务的代理对象
+	 *
+	 * 主要是 AbstractAutoProxyCreator.postProcessAfterInitialization()
 	 */
 	@Nullable
 	default Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {

@@ -132,6 +132,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 
 	private final Set<String> targetSourcedBeans = Collections.newSetFromMap(new ConcurrentHashMap<>(16));
 
+	//记录某个Bean是否需要增强 <cacheKey,Bean的早期引用>
 	private final Map<Object, Object> earlyProxyReferences = new ConcurrentHashMap<>(16);
 
 	//<cacheKey,proxy.class>
@@ -258,10 +259,13 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		return null;
 	}
 
+
 	@Override
 	public Object getEarlyBeanReference(Object bean, String beanName) {
 		Object cacheKey = getCacheKey(bean.getClass(), beanName);
+		//表示某个Bean提前进行了处理，后面的原本正常AOP代理逻辑（postProcessAfterInitialization）就可以判断是否之前处理过了
 		this.earlyProxyReferences.put(cacheKey, bean);
+		//返回一个Bean（可能增强可能没增强）
 		return wrapIfNecessary(bean, beanName, cacheKey);
 	}
 
@@ -321,18 +325,21 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	 * identified as one to proxy by the subclass.
 	 *
 	 * 如果bean是被子类标识为要代理的一个。那就创建一个代理对象
+	 * 对于产生循环依赖的并且是代理对象的由于之前已经生成了，所以earlyProxyReferences有的话就直接返回了
 	 *
 	 * 注意：如果是AOP切面就会创建AOP代理对象，如果是Spring事务，就会创建事务的代理对象，最终在把这些代理对象返回给IOC
 	 * @see #getAdvicesAndAdvisorsForBean
 	 *
 	 * 具体调用是在AbstractAutowireCapableBeanFactory.applyBeanPostProcessorsAfterInitialization()
+	 *
 	 */
 	@Override
 	public Object postProcessAfterInitialization(@Nullable Object bean, String beanName) {
 		if (bean != null) {
 			//获取缓存的Key
 			Object cacheKey = getCacheKey(bean.getClass(), beanName);
-			//
+			//如果产生了循环依赖，earlyProxyReferences 是会存在提前的引用的，就不会进入下面这个if
+			//能进入这个if说明就是普通的aop增强，没有产生循环依赖
 			if (this.earlyProxyReferences.remove(cacheKey) != bean) {
 				//检测是否增强处理,需要的话就返回增强后的，否则就是原生的
 				return wrapIfNecessary(bean, beanName, cacheKey);
@@ -371,7 +378,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	 * @param cacheKey the cache key for metadata access
 	 * @return a proxy wrapping the bean, or the raw bean instance as-is
 	 *
-	 * 对Bean进行增强
+	 * 返回Bean 可能增强也可能没增强
 	 */
 	protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
 		//如果当前Bean已经被增强过，则直接返回

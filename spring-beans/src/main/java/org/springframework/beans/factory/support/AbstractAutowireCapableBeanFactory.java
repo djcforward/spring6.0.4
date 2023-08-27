@@ -92,7 +92,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 * Whether to resort to injecting a raw bean instance in case of circular reference,
 	 * even if the injected bean eventually got wrapped.
 	 *
-	 * 是否在循环引用的情况下诉诸注入原始 bean 实例，即使注入的 bean 最终被包装。
+	 * 是否在循环引用的情况下注入原始 bean 实例，尽管注入的 bean 最终被包装。
+	 * 默认是不允许的
 	 */
 	private boolean allowRawInjectionDespiteWrapping = false;
 
@@ -411,6 +412,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		Object result = existingBean;
 		for (BeanPostProcessor processor : getBeanPostProcessors()) {
+			//实际调用的是AbstractAutoProxyCreator.postProcessAfterInitialization()
+			//拿到从二级缓存中获得的Bean
 			Object current = processor.postProcessAfterInitialization(result, beanName);
 			if (current == null) {
 				return result;
@@ -536,15 +539,15 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 * 	0.如果是单例，则去未初始化的的factoryBeanInstanceCache拿BeanWrapper（不重要）
 	 * 	1.调用createBeanInstance()创建BeanWrapper（为什么是Wrapper可以参考笔记https://www.yuque.com/littledu-6kzp3/kb/ptf9t3）
 	 * 	2.调用 MergedBeanDefinitionPostProcessors 调用逻辑去处理Bean的信息(拿到@Autowired,@Value,@Inject标记的字段)
-	 * 	3.将Bean加入三级缓存的map中  singletonFactories <beanName,objectFactory>
+	 * 	3.给Bean设置相应的三级缓存 singletonFactories <beanName,objectFactory>
 	 * 	4.注入Bean的属性(也会执行第二步的逻辑，去拿到相应的字段)
 	 * 	5.调用初始化方法
 	 * 		 (0) 处理AWare接口
 	 * 		（1）后置处理器处理标记了@PostConstruct的方法
 	 * 		（2）调用重写的InitializingBean.afterPropertiesSet()
 	 * 		（3）自定义的init-method
-	 * 		 (4) 调用BeanPostProcessor的后置处理逻辑检测是否需要生成AOP代理，如果需要的话返回的就是代理对象
-	 *  6. 从缓存中拿数据 并校验是否存在代理对象的循环依赖
+	 * 		 (4) 调用BeanPostProcessor的后置处理逻辑检测是否需要生成AOP代理，如果需要的话返回的就是代理对象（对象是从二级缓存中拿的）
+	 *  6. 从缓存中拿数据 并校验是否存在不通过AOP的代理对象的循环依赖（循环依赖中的对象有方法标注了@Async）
 	 */
 	protected Object doCreateBean(String beanName, RootBeanDefinition mbd, @Nullable Object[] args)
 			throws BeanCreationException {
@@ -559,7 +562,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			/** 1 创建BeanWrapper */
 			instanceWrapper = createBeanInstance(beanName, mbd, args);
 		}
-		Object bean = instanceWrapper.getWrappedInstance();//拿到原生对象
+		Object bean = instanceWrapper.getWrappedInstance();//拿到刚实例化的对象
 		Class<?> beanType = instanceWrapper.getWrappedClass();//拿到原生对象的类型
 		if (beanType != NullBean.class) {
 			mbd.resolvedTargetType = beanType;
@@ -588,6 +591,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// even when triggered by lifecycle interfaces like BeanFactoryAware.
  		// 急切地缓存单例以能够解决循环引用 即使被像 BeanFactoryAware 这样的生命周期接口触发。
 		// earlySingletonExposure 一般为true 用来解决循环依赖的
+		// isSingletonCurrentlyInCreation()：判断当前Bean是不是正在创建了
 		boolean earlySingletonExposure = (mbd.isSingleton() && this.allowCircularReferences &&
 				isSingletonCurrentlyInCreation(beanName));
 		if (earlySingletonExposure) {
@@ -607,7 +611,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		try {
 			/**4.填充Bean的属性，比如@Autowired，@Resource标注的字段 */
 			populateBean(beanName, mbd, instanceWrapper);
-			/**5.初始化Bean，调用初始化方法 并判断是否增强了 如果增强了返回的就是代理对象*/
+			/**5.初始化Bean，调用初始化方法 并判断是否增强了 如果增强了返回的就是代理对象 是从二级缓存中拿到的对象*/
 			exposedObject = initializeBean(beanName, exposedObject, mbd);
 		}
 		catch (Throwable ex) {
@@ -619,7 +623,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}
 		}
 
-		/***6. 从缓存中拿数据 并校验代理对象的循环依赖 ---*/
+		/***6. 从缓存中拿数据 并校验代理对象的循环依赖 不允许注入的是原生对象，最后生成的却是代理对象 eg：@Async---*/
 		if (earlySingletonExposure) {
 			// 获取单例对象，earlySingletonReference 可能是一级缓存返回的完整的对象，
 			// 也可能是二级缓存（已经经历了三级缓存创建）返回的刚创建好的
@@ -638,15 +642,23 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				 * 如果当前Bean是代理对象就会来到这个else if
 				 *
 				 * 大体逻辑就是获得依赖当前Bean的那些Bean，只要那些Bean不为空就会抛BeanCurrentlyInCreationException
+				 *
+				 * !this.allowRawInjectionDespiteWrapping ： 不允许Bean是代理对象但是在循环依赖中使用的原生对象
+				 * hasDependentBean(beanName)：表示已经有对象依赖 beanName 了
 				 */
 				else if (!this.allowRawInjectionDespiteWrapping && hasDependentBean(beanName)) {
+					//获得依赖当前Bean的所有Bean
 					String[] dependentBeans = getDependentBeans(beanName);
+					//过滤得到真正依赖当前Bean的所有Bean，并且这些Bean不是仅仅用于类型检查的。
+					//这些依赖当前Bean的对象依赖的是当前Bean的原生对象，但是现在这个Bean却被代理了，那肯定是不允许的
 					Set<String> actualDependentBeans = new LinkedHashSet<>(dependentBeans.length);
 					for (String dependentBean : dependentBeans) {
 						if (!removeSingletonIfCreatedForTypeCheckOnly(dependentBean)) {
 							actualDependentBeans.add(dependentBean);
 						}
 					}
+					//说明有对象是依赖当前Bean的原生对象的，但是当前Bean是生成的是代理对象了，所以抛异常
+					/*********个人认为不会抛这个异常，因为代理已经被提到实例化之前了****************/
 					if (!actualDependentBeans.isEmpty()) {
 						throw new BeanCurrentlyInCreationException(beanName,
 								"Bean with name '" + beanName + "' has been injected into other beans [" +
@@ -967,7 +979,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 * typically for the purpose of resolving a circular reference.
 	 *
 	 * 获取Bean的早期引用，为了解决循环依赖
+	 *
 	 * 通过特殊的后置处理器，去判断是否需要生成代理
+	 * 如果需要代理就会返回代理对象 否则返回原生对象
 	 * @param beanName the name of the bean (for error handling purposes)
 	 * @param mbd the merged bean definition for the bean
 	 * @param bean the raw bean instance
@@ -1134,14 +1148,17 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			// Make sure bean class is actually resolved at this point.
 			// 当前Bean不是合成的（这个条件默认是成立的） && 已经有了特殊的后置处理器
 			if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
+				// 确定要实例化的Bean的类型
 				Class<?> targetType = determineTargetType(beanName, mbd);
 				if (targetType != null) {
+					//执行所有已经注册的 特殊的后置处理器的 postProcessBeforeInstantiation
 					bean = applyBeanPostProcessorsBeforeInstantiation(targetType, beanName);
 					if (bean != null) {
 						bean = applyBeanPostProcessorsAfterInitialization(bean, beanName);
 					}
 				}
 			}
+			//下一次再进来的时候 !Boolean.FALSE.equals(mbd.beforeInstantiationResolved) 就进不去了
 			mbd.beforeInstantiationResolved = (bean != null);
 		}
 		return bean;
@@ -1810,7 +1827,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					(mbd != null ? mbd.getResourceDescription() : null), beanName, ex.getMessage(), ex);
 		}
 		if (mbd == null || !mbd.isSynthetic()) {
-			/**5.4  后置处理器的后置逻辑去判断是否增强了 如果增强了的话此时的wrappedBean就是代理对象*/
+			/**5.4  特殊后置处理器的后置逻辑去判断是否增强了 如果增强了的话此时的wrappedBean就是代理对象*/
 			wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
 		}
 

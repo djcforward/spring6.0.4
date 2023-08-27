@@ -186,7 +186,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	/**
 	 * Return an instance, which may be shared or independent, of the specified bean.
 	 *
-	 * 创建一个Bean并返回（可能是单例可能是多例）
+	 * 得到一个Bean并返回（可能是单例可能是多例）
+	 * 最终的创建逻辑是在子类AbstractAutowireCapableBeanFactory实现的
+	 *
 	 * @param name the name of the bean to retrieve
 	 * @param requiredType the required type of the bean to retrieve 要检索的 bean 的必需类型
 	 *
@@ -210,7 +212,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * 		3.2 没有的话就自己创建
 	 * 		3.3 获取要创建的Bean对象的@DependsOn里的名称，先去创建@DependsOn的Bean，并且校验是否存在循环引用。
 	 * 		3.4 创建Bean对象，根据类型创建不同生命周期的Bean，比如single prototype request session
-	 * 				无论是什么类型的，都会去调用
+	 * 				无论是什么类型的，都会去调用 并且解析 @Value 并且检查有没有构造器的循环依赖
 	 * 		3.5 如果需要强制转型就强转，不需要就不转。
 	 *
 	 */
@@ -224,7 +226,10 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		Object beanInstance;
 
 		// Eagerly check singleton cache for manually registered singletons.
-		/** 2 ****从缓存中获取Bean******/
+		/** 2 从缓存中获取Bean 涉及循环依赖，但是第一次进来的时候啥都没有，三级缓存也没有被创建*
+		 * A-->B  B-->A 第一次创建A时没有三级缓存，B创建A的时候，也就是第二次进来的时候就有三级缓存了
+		 * 然后就通过三级缓存拿Bean然后就可以直接返回了
+		 * *****/
 		//获取单例Bean，对于FactoryBean来说，获取的是FactoryBean，而不是是里面创建的Bean
 		Object sharedInstance = getSingleton(beanName);
 		if (sharedInstance != null && args == null) {
@@ -282,7 +287,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			StartupStep beanCreation = this.applicationStartup.start("spring.beans.instantiate")
 					.tag("beanName", name);
 
-			/** 3.2 没有的话就自己创建 */
+			/** 3.2 没有的话就创建 */
 			try {
 				if (requiredType != null) {
 					beanCreation.tag("beanType", requiredType::toString);
@@ -292,7 +297,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				/**解析 @DependsOn ---------begin*/
 				// Guarantee initialization of beans that the current bean depends on.
 				// 保证当前 bean 所依赖的 bean 的初始化。
-				/**3.3 获取要创建的Bean对象的@DependsOn里的名称，先去创建@DependsOn的Bean，并且校验是否存在循环引用。 */
+				/**3.3 获取要创建的Bean对象的@DependsOn里的名称，先去创建@DependsOn的Bean，先校验是否存在循环引用，不存在才能创建。 */
 				String[] dependsOn = mbd.getDependsOn();
 				if (dependsOn != null) {
 					for (String dep : dependsOn) {
@@ -301,10 +306,10 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 							throw new BeanCreationException(mbd.getResourceDescription(), beanName,
 									"Circular depends-on relationship between '" + beanName + "' and '" + dep + "'");
 						}
-						//为当前的Bean和他依赖的Bean创建相应的映射关系
+						//为当前的Bean和他依赖的Bean创建相应的映射关系，就是对应的两个map
 						registerDependentBean(dep, beanName);
 						try {
-							//实例化当前给的Bean所依赖的Bean
+							//实例化当前给的Bean所依赖的Bean，比如 A-->B ,此时先去实例化B
 							getBean(dep);
 						}
 						catch (NoSuchBeanDefinitionException ex) {
@@ -319,7 +324,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				/**解析 @Value 并且检查有没有构造器的循环依赖---------begin*/
 				// Create bean instance. 前提是mbd是单例Bean
 				if (mbd.isSingleton()) {//如果是单例Bean，会调用对应的createBean(beanName, mbd, args);
-					// getSingleton()中会判断有没有构造器的循环依赖
+					// getSingleton()：通过 ObjectFactory（和三级缓存没有关系） 拿对象，并且会判断有没有构造器的循环依赖
 					sharedInstance = getSingleton(beanName, () -> {
 						try {
 							return createBean(beanName, mbd, args);
@@ -1153,6 +1158,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 *
 	 * prototypesCurrentlyInCreation存储的可能是
 	 * 		1.String 即beanName
+	 *
 	 * 		2.是一个set集合，set集合存名字（set集合天然的保证了无重复）
 	 */
 	@SuppressWarnings("unchecked")

@@ -257,12 +257,12 @@ public abstract class AnnotationConfigUtils {
 	 * 		（1）register()，用于检查指定的配置类是否标记了@Lazy,@Primary,@DependsOn,@Role,@Description
 	 * 		（2）refresh()，如果@Import 引入的类中是普通的类 或者 实现了ImportSelector但没实现DeferredImportSelector的类
 	 * 					然后封装符合条件的引入的类
-	 * 		（3）refresh()，@ComponetScan()指定路径的时候，他也会扫描这些路径下的Bean有没有标记@DependsOn这些注解 然后封装
+	 * 		（3）refresh()，@ComponetScan()指定路径的时候，他也会扫描这些路径下的Bean有没有标记@DependsOn这些注解 然后封装abd
 	 * @param abd AnnotatedBeanDefinition 根据metadata将信息封装到 AnnotatedBeanDefinition abd 中
 	 * @param metadata
 	 */
 	static void processCommonDefinitionAnnotations(AnnotatedBeanDefinition abd, AnnotatedTypeMetadata metadata) {
-		/**处理 @DependsOn 将信息封装到AnnotatedBeanDefinition abc中*/
+		/**处理 @Lazy 将信息封装到AnnotatedBeanDefinition abc中*/
 		AnnotationAttributes lazy = attributesFor(metadata, Lazy.class);
 		if (lazy != null) {
 			abd.setLazyInit(lazy.getBoolean("value"));
