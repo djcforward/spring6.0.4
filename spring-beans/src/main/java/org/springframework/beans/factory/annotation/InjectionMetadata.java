@@ -141,6 +141,7 @@ public class InjectionMetadata {
 				(checkedElements != null ? checkedElements : this.injectedElements);
 		if (!elementsToIterate.isEmpty()) {
 			for (InjectedElement element : elementsToIterate) {
+				/************/
 				element.inject(target, beanName, pvs);
 			}
 		}
@@ -250,7 +251,7 @@ public class InjectionMetadata {
 			if (this.isField) {
 				Field field = (Field) this.member;
 				ReflectionUtils.makeAccessible(field);
-				//getResourceToInject(target, requestingBeanName)：获取要注入的值
+				//getResourceToInject(target, requestingBeanName)：获取要注入的值,如果标记了@Lazy直接返回一个代理对象
 				field.set(target, getResourceToInject(target, requestingBeanName));
 			}
 			/**核心逻辑---------end*/

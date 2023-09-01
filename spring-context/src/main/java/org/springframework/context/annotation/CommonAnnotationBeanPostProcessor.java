@@ -622,6 +622,7 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 
 		@Override
 		protected Object getResourceToInject(Object target, @Nullable String requestingBeanName) {
+			//判断该属性有没有@Lazy修饰，有的话直接返回一个代理对象，可以解除循环依赖，但是需要注意的是IOC注入的对象是原生对象不是这里的代理对象
 			return (this.lazyLookup ? buildLazyResourceProxy(this, requestingBeanName) :
 					getResource(this, requestingBeanName));
 		}

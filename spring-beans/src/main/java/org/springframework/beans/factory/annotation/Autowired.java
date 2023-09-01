@@ -108,7 +108,8 @@ import java.lang.annotation.Target;
  *  		2.填充标注了@Autowired的字段
  *  			具体在AbstractAutowireCapableBeanFactory.doCreateBean().populateBean()
  *  		问题：@Autowired的字段是如何获取属性的值的？
- *  			具体在AutowiredFieldElement.inject()
+ *  			具体在AutowiredFieldElement.inject(),并且会判断该属性有没有@Lazy标注，有的话直接返回一个代理对象不触发Bean对象的加载
+ *  			返回代理对象的逻辑在ContextAnnotationAutowireCandidateResolver#getLazyResolutionProxyIfNecessary()
  */
 @Target({ElementType.CONSTRUCTOR, ElementType.METHOD, ElementType.PARAMETER, ElementType.FIELD, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
