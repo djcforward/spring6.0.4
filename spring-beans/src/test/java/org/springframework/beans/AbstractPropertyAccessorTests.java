@@ -81,7 +81,7 @@ abstract class AbstractPropertyAccessorTests {
 	@Test
 	void isReadableProperty() {
 		AbstractPropertyAccessor accessor = createAccessor(new Simple("John", 2));
-
+		//
 		assertThat(accessor.isReadableProperty("name")).isTrue();
 	}
 
